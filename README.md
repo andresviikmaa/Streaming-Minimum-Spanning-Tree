@@ -1,1 +1,1 @@
-# Streaming-Minimum-Spanning-Tree-
+# Streaming Minimum Spanning Tree
