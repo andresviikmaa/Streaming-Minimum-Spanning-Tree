@@ -15,8 +15,8 @@
   fill: green;
 }
 
-.link.licensing {
-  stroke: green;
+.link.mst {
+  stroke: #ff0000;
 }
 
 .link.resolved {
@@ -43,6 +43,12 @@ text {
 <script src="//d3js.org/d3.v3.min.js"></script>
 <pre>Click on empty area to create node and click on two nodes to create link between them</pre>
 <script>
+function dist( a, b )
+{
+  var dx = a.x - b.x;
+  var dy = a.y - b.y;
+  return dx*dx + dy*dy;
+}
 
 var selectedNode = -1;
 var N = 0;
@@ -54,9 +60,15 @@ var force = d3.layout.force()
 //    .nodes(nodes)
 //    .links(links)
     .size([width, height])
-    .linkDistance(60)
+//    .linkDistance(60)
+//    .gravity(0)
     .charge(-300)
     .on("tick", tick)
+    .linkDistance(function(link){
+      return 60;
+      var s=link.source, t= link.target;
+      return Math.sqrt(Math.pow(s.x0 - t.x0,2) + Math.pow(s.y0 - t.y0,2));
+    })
     .start();
 
 var nodes = force.nodes();
@@ -83,7 +95,12 @@ svg.append("defs").selectAll("marker")
 
 // Use elliptical arc path segments to doubly-encode directionality.
 function tick() {
-  svg.selectAll("g > path").attr("d", linkArc);
+  //svg.selectAll("g > path").attr("d", linkArc);
+  svg.selectAll("g > line").attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; })
+        .attr("class", function(d) { return "link " + (d.mst ? 'mst' : ''); });
   svg.selectAll("g > circle").attr("transform", transform).attr("class", function(d) { return d.n == selectedNode ? 'selected' : ''; });
   svg.selectAll("g > text").attr("transform", transform);
    
@@ -98,12 +115,15 @@ function linkArc(d) {
   return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
 }
 
+
 function transform(d) {
   return "translate(" + d.x + "," + d.y + ")";
 }
 
 function addNode(){
-	var node = {name: N+1, n:N};
+      console.log(d3.event);
+
+	var node = {name: N+1, n:N, x:d3.event.offsetX, y:d3.event.offsetY , x0:d3.event.offsetX, y0:d3.event.offsetY};
 	nodes.push(node);
 	svg.append("g").selectAll("circle")
       .data([node])
@@ -111,15 +131,16 @@ function addNode(){
 	  .attr("r", 6)
       .call(force.drag)
 	  .on("click", function(d) {
-		if(selectedNode == -1) {
-			selectedNode = d.n;
-		} else if (selectedNode == d.n) {
-			selectedNode = -1;
-		} else {
-			addLink(selectedNode, d.n);
-			selectedNode = -1;
-		}
-		d3.event.stopPropagation();
+      if(selectedNode == -1) {
+        selectedNode = d.n;
+      } else if (selectedNode == d.n) {
+        selectedNode = -1;
+      } else {
+        addLink(selectedNode, d.n);
+        //addLink(d.n,selectedNode);
+        selectedNode = -1;
+      }
+      d3.event.stopPropagation();
 	  });
 	svg.append("g").selectAll("text")
 		.data([node])
@@ -134,12 +155,104 @@ function addNode(){
 function addLink(s, t) {
 	link = {source: s, target: t, type: "suit"};
 	links.push(link);
-	svg.append("g").selectAll("path")
+//	svg.append("g").selectAll("path")
+	svg.append("g").selectAll("line")
     .data([link])
-	.enter().append("path")
-    .attr("class", function(d) { return "link " + d.type; })
-    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
+	.enter().append("line")
+    .attr("class", function(d) { return "link " + (d.mst ? 'mst' : ''); })
+//    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
 	force.start();
+  mst();
+}
+function MakeSet(count) {
+  this.roots = new Array(count);
+  this.ranks = new Array(count);
+  
+  for(var i=0; i<count; ++i) {
+    this.roots[i] = i;
+    this.ranks[i] = 0;
+  }
+  this.find = function(x) {
+    var x0 = x
+    var roots = this.roots;
+    while(roots[x] !== x) {
+      x = roots[x]
+    }
+    while(roots[x0] !== x) {
+      var y = roots[x0]
+      roots[x0] = x
+      x0 = y
+    }
+    return x;
+  }
+
+  
+  this.link = function(x, y) {
+    var xr = this.find(x)
+      , yr = this.find(y);
+    if(xr === yr) {
+      return;
+    }
+    var ranks = this.ranks
+      , roots = this.roots
+      , xd    = ranks[xr]
+      , yd    = ranks[yr];
+    if(xd < yd) {
+      roots[xr] = yr;
+    } else if(yd < xd) {
+      roots[yr] = xr;
+    } else {
+      roots[yr] = xr;
+      ++ranks[xr];
+    }
+  }
+}
+
+function mst() {
+      var set = {};
+
+      var finalEdge = [];
+
+      var forest = new MakeSet( nodes.length );
+
+      var edgeDist = [];
+      for (var ind in links)
+      {
+        var u = links[ind].source;
+        var v = links[ind].target;
+        var e = { edge: links[ind], weight: dist( u, v )  };
+        edgeDist.push(e);
+      }
+
+      edgeDist.sort( function(a, b) { return a.weight- b.weight; } );
+
+      for (var i=0; i<edgeDist.length; i++)
+      {
+        var u = edgeDist[i].edge.source.index;
+        var v = edgeDist[i].edge.target.index;
+
+        if ( forest.find(u) != forest.find(v) )
+        {
+          finalEdge.push( [ u, v ] );
+          forest.link( u, v );
+          edgeDist[i].edge.mst = true;
+        } else {
+          edgeDist[i].edge.mst = false;
+        }
+      }
+      
+      for (var ind in finalEdge)
+      {
+        var u = finalEdge[ind][0];
+        var v = finalEdge[ind][1];
+
+        console.log( nodes[u].name + " - " + nodes[v].name );
+
+      }
+        console.log("");
+
+      return finalEdge;
+
 }
 
 </script>
