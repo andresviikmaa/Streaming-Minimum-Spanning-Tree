@@ -5,6 +5,9 @@
  svg {
 	border: 1px dotted black;
  }
+ svg.busy {
+     background: rgba(255,0,0,0.03);
+ }
 .link {
   fill: none;
   stroke: #666;
@@ -15,8 +18,11 @@
   fill: green;
 }
 
+.link.no_mst {
+  stroke: #cc0000;
+}
 .link.mst {
-  stroke: #ff0000;
+  stroke: #00ff00;
 }
 
 .link.resolved {
@@ -41,10 +47,12 @@ text {
 </style>
 <body>
 <script src="//d3js.org/d3.v3.min.js"></script>
-<pre>Click on empty area to create node and click on two nodes to create link between them</pre>
+<pre>Left click on empty area to create node with link to random node <br>or right click to create link between two random nodes</pre>
 <script>
+var mst_in_progress = false;
 function dist( a, b )
 {
+	return ((a.n - b.n) % 2) ? 60 : 120;
   var dx = a.x - b.x;
   var dy = a.y - b.y;
   return dx*dx + dy*dy;
@@ -55,19 +63,20 @@ var N = 0;
 
 var width = 960,
     height = 500;
-
+var delay = 1000;
 var force = d3.layout.force()
 //    .nodes(nodes)
 //    .links(links)
     .size([width, height])
 //    .linkDistance(60)
-//    .gravity(0)
+    .gravity(0.01)
     .charge(-300)
     .on("tick", tick)
     .linkDistance(function(link){
-      return 60;
+      //return 60;
       var s=link.source, t= link.target;
-      return Math.sqrt(Math.pow(s.x0 - t.x0,2) + Math.pow(s.y0 - t.y0,2));
+	  return dist( s, t )
+      //return Math.sqrt(Math.pow(s.x0 - t.x0,2) + Math.pow(s.y0 - t.y0,2));
     })
     .start();
 
@@ -77,7 +86,30 @@ var links = force.links();
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
-	.on("click", addNode);
+	.on("click", function(){
+		var _addNode = false;
+		d3.event.preventDefault();
+		d3.event.stopPropagation();
+		if(mst_in_progress) return false;
+		if(N < 2) {
+			addNode();
+			return false;
+		}
+		
+		var s = Math.floor(Math.random() * N);
+		var t = Math.floor(Math.random() * N);
+		for (var ind in links) {
+			if (s == t) _addNode = true;
+			if (links[ind].source.n == s && links[ind].target.n == t) _addNode = true;
+			if (links[ind].source.n == t && links[ind].target.n == s) _addNode = true;
+		}
+		if (_addNode)
+			addNode();
+		else
+			addLink(s,t);
+		return false;
+		
+	});
 
 // Per-type markers, as they don't inherit styles.
 svg.append("defs").selectAll("marker")
@@ -100,7 +132,7 @@ function tick() {
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; })
-        .attr("class", function(d) { return "link " + (d.mst ? 'mst' : ''); });
+        .attr("class", function(d) { return "link " + (d.mst == 1 ? 'mst' : (d.mst == 0 ? 'no_mst': '')); });
   svg.selectAll("g > circle").attr("transform", transform).attr("class", function(d) { return d.n == selectedNode ? 'selected' : ''; });
   svg.selectAll("g > text").attr("transform", transform);
    
@@ -121,16 +153,21 @@ function transform(d) {
 }
 
 function addNode(){
-      console.log(d3.event);
+    if(mst_in_progress) return false;
+
 
 	var node = {name: N+1, n:N, x:d3.event.offsetX, y:d3.event.offsetY , x0:d3.event.offsetX, y0:d3.event.offsetY};
 	nodes.push(node);
 	svg.append("g").selectAll("circle")
       .data([node])
       .enter().append("circle")
-	  .attr("r", 6)
+	  .attr("r", 8)
       .call(force.drag)
+	  
 	  .on("click", function(d) {
+	  	d3.event.stopPropagation();
+		return false;
+		/*
       if(selectedNode == -1) {
         selectedNode = d.n;
       } else if (selectedNode == d.n) {
@@ -141,18 +178,23 @@ function addNode(){
         selectedNode = -1;
       }
       d3.event.stopPropagation();
-	  });
+	  */});
+	  
 	svg.append("g").selectAll("text")
 		.data([node])
 		.enter().append("text")
-		.attr("x", 8)
+		.attr("x", 10)
 		.attr("y", ".31em")
 		.text(function(d) { return d.name; });	  
+	if(N > 0)
+		addLink(N, Math.floor((Math.random() * N)));
 	N++;
+	delay = (1000 / N)*2;
 	force.start();
 }
 
 function addLink(s, t) {
+	console.log(s,t);
 	link = {source: s, target: t, type: "suit"};
 	links.push(link);
 //	svg.append("g").selectAll("path")
@@ -207,38 +249,68 @@ function MakeSet(count) {
     }
   }
 }
+function mst_step(edgeDist, forest, finalEdge, i) {
+	var u = edgeDist[i].edge.source.index;
+	var v = edgeDist[i].edge.target.index;
+
+	// Coloring step (Kruskal). If the current edge e has both ends in the same blue
+	// tree, color it red; otherwise color it blue.
+	if ( forest.find(u) != forest.find(v) )
+	{
+	  finalEdge.push( [ u, v ] );
+	  forest.link( u, v );
+	  edgeDist[i].edge.mst = 1;
+	} else {
+	  edgeDist[i].edge.mst = 0;
+	}
+	tick();
+	if(i < edgeDist.length-1) {
+		setTimeout(function(){
+			mst_step(edgeDist, forest, finalEdge, i+1);
+		}, delay)
+	} else {
+		mst_in_progress = false;
+		svg.attr("class", "");
+	}
+	
+}
 
 function mst() {
+	  mst_in_progress = true;
+	  svg.attr("class", "busy");	  
       var set = {};
 
       var finalEdge = [];
 
-      var forest = new MakeSet( nodes.length );
-
       var edgeDist = [];
       for (var ind in links)
       {
+		links[ind].mst = -1;
         var u = links[ind].source;
         var v = links[ind].target;
         var e = { edge: links[ind], weight: dist( u, v )  };
         edgeDist.push(e);
       }
-
+	  tick();
+	  /*
+		To implement Kruskal's algorithm, we must solve two problems: ordering the
+		edges by cost and representing the blue trees so that we can test whether two vertices
+		in the blue The simplest solve the former problem is the
+		edges by cost in a preprocessing step. The latter problem is a version of the disjoint
+		set union problem discussed in Chapter 2, and we can use the operations of makeset,
+		find and link to maintain the vertex sets of the blue trees.
+	 */
+      var forest = new MakeSet( nodes.length );
       edgeDist.sort( function(a, b) { return a.weight- b.weight; } );
-
+	  var i = 0;
+		setTimeout(function(){
+			mst_step(edgeDist, forest, finalEdge, i);
+		}, delay)
+	  return;
+	  
       for (var i=0; i<edgeDist.length; i++)
       {
-        var u = edgeDist[i].edge.source.index;
-        var v = edgeDist[i].edge.target.index;
-
-        if ( forest.find(u) != forest.find(v) )
-        {
-          finalEdge.push( [ u, v ] );
-          forest.link( u, v );
-          edgeDist[i].edge.mst = true;
-        } else {
-          edgeDist[i].edge.mst = false;
-        }
+		mst_step(edgeDist, forest, finalEdge, i);
       }
       
       for (var ind in finalEdge)
@@ -256,4 +328,4 @@ function mst() {
 }
 
 </script>
-<a href="https://github.com/andresviikmaa/Streaming-Minimum-Spanning-Tree"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/652c5b9acfaddf3a9c326fa6bde407b87f7be0f4/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6f72616e67655f6666373630302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>   
+<a href="https://github.com/andresviikmaa/Streaming-Minimum-Spanning-Tree" target="_blank"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/652c5b9acfaddf3a9c326fa6bde407b87f7be0f4/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6f72616e67655f6666373630302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>   
