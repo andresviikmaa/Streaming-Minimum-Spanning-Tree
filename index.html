@@ -4,6 +4,8 @@
 
  svg {
 	border: 1px dotted black;
+  float:left
+  
  }
  svg.busy {
      background: rgba(255,0,0,0.03);
@@ -43,16 +45,19 @@ text {
   pointer-events: none;
   text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
 }
-
+textarea {
+  float:left;
+  height:496px;
+}
 </style>
 <body>
 <script src="//d3js.org/d3.v3.min.js"></script>
-<pre>Left click on empty area to create node with link to random node <br>or right click to create link between two random nodes</pre>
+<pre>Left click on empty area to add new edge to graph</pre>
 <script>
 var mst_in_progress = false;
 function dist( a, b )
 {
-	return ((a.n - b.n) % 2) ? 60 : 120;
+	return ((a - b) % 2) ? 60 : 120;
   var dx = a.x - b.x;
   var dy = a.y - b.y;
   return dx*dx + dy*dy;
@@ -60,7 +65,7 @@ function dist( a, b )
 
 var selectedNode = -1;
 var N = 0;
-
+var MST = [];
 var width = 960,
     height = 500;
 var delay = 1000;
@@ -70,19 +75,18 @@ var force = d3.layout.force()
     .size([width, height])
 //    .linkDistance(60)
     .gravity(0.01)
-    .charge(-300)
+    .charge(-600)
     .on("tick", tick)
     .linkDistance(function(link){
       //return 60;
       var s=link.source, t= link.target;
-	  return dist( s, t )
+	  return dist( s.n, t.n )
       //return Math.sqrt(Math.pow(s.x0 - t.x0,2) + Math.pow(s.y0 - t.y0,2));
     })
     .start();
 
 var nodes = force.nodes();
 var links = force.links();
-	
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
@@ -105,25 +109,21 @@ var svg = d3.select("body").append("svg")
 		}
 		if (_addNode)
 			addNode();
-		else
-			addLink(s,t);
+		else {
+			link = addLink(s,t);
+      fixCycle(t, s, link);
+    }
 		return false;
 		
 	});
 
 // Per-type markers, as they don't inherit styles.
 svg.append("defs").selectAll("marker")
-    .data(["suit", "licensing", "resolved"])
-  .enter().append("marker")
-    .attr("id", function(d) { return d; })
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 15)
-    .attr("refY", -1.5)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
-    .attr("orient", "auto")
   .append("path")
     .attr("d", "M0,-5L10,0L0,5");
+
+  var textarea = d3.select("body").append("textarea");
+	
 
 // Use elliptical arc path segments to doubly-encode directionality.
 function tick() {
@@ -156,7 +156,7 @@ function addNode(){
     if(mst_in_progress) return false;
 
 
-	var node = {name: N+1, n:N, x:d3.event.offsetX, y:d3.event.offsetY , x0:d3.event.offsetX, y0:d3.event.offsetY};
+	var node = {name: N, n:N, x:d3.event.offsetX, y:d3.event.offsetY , x0:d3.event.offsetX, y0:d3.event.offsetY};
 	nodes.push(node);
 	svg.append("g").selectAll("circle")
       .data([node])
@@ -186,16 +186,22 @@ function addNode(){
 		.attr("x", 10)
 		.attr("y", ".31em")
 		.text(function(d) { return d.name; });	  
-	if(N > 0)
-		addLink(N, Math.floor((Math.random() * N)));
+    if(N > 0) {
+      link = addLink(N, Math.floor((Math.random() * N)));
+      link.mst = 1;
+      MST.push(link);
+    }
 	N++;
 	delay = (1000 / N)*2;
 	force.start();
 }
 
 function addLink(s, t) {
-	console.log(s,t);
-	link = {source: s, target: t, type: "suit"};
+	//console.log(s,t, d3.select("textarea")[0][0].value );
+  var ss = (s+1);
+  var tt = (t+1)
+  d3.select("textarea")[0][0].value = ss + " - " + tt + "\n" + d3.select("textarea")[0][0].value;
+	link = {source: s, target: t, weight: dist( s, t )};
 	links.push(link);
 //	svg.append("g").selectAll("path")
 	svg.append("g").selectAll("line")
@@ -204,8 +210,43 @@ function addLink(s, t) {
     .attr("class", function(d) { return "link " + (d.mst ? 'mst' : ''); })
 //    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
 	force.start();
-  mst();
+  return link;
+  //mst_kruskal();
 }
+
+function findEdgeInMST(s) {
+  for (ind in MST) {
+    if (MST[ind].source.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].target.n]; }
+    if (MST[ind].target.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].source.n]; }
+  }
+  return [-1, -1];
+}
+function traversePath(v, t, path) {
+  if(t == v) return path;
+  while(true) {
+    var edge = findEdgeInMST(v);
+    if(edge[0] == -1) return -1;
+    var new_path = traversePath(edge[1], t, path.concat([ edge[0] ]));
+    if(new_path !== -1) return new_path;
+  }
+  return -1;
+}
+function fixCycle(s, t, link) {
+  console.log(s, t, MST);
+  for (ind in MST) {
+      MST[ind].visited = false;
+  }
+  path = traversePath(s, t, []);
+  path.sort( function(a, b) { return a.weight - b.weight; } );
+  console.log(path);
+  if(path[path.length-1].weight > link.weight) {
+    path[path.length-1].mst = false;
+    link.mst = true;
+    MST.push(link);
+    tick();
+  }
+}
+
 function MakeSet(count) {
   this.roots = new Array(count);
   this.ranks = new Array(count);
@@ -249,7 +290,7 @@ function MakeSet(count) {
     }
   }
 }
-function mst_step(edgeDist, forest, finalEdge, i) {
+function mst_kruskal_step(edgeDist, forest, finalEdge, i) {
 	var u = edgeDist[i].edge.source.index;
 	var v = edgeDist[i].edge.target.index;
 
@@ -275,7 +316,7 @@ function mst_step(edgeDist, forest, finalEdge, i) {
 	
 }
 
-function mst() {
+function mst_kruskal() {
 	  mst_in_progress = true;
 	  svg.attr("class", "busy");	  
       var set = {};
@@ -285,10 +326,10 @@ function mst() {
       var edgeDist = [];
       for (var ind in links)
       {
-		links[ind].mst = -1;
+        links[ind].mst = -1;
         var u = links[ind].source;
         var v = links[ind].target;
-        var e = { edge: links[ind], weight: dist( u, v )  };
+        var e = { edge: links[ind], weight: dist( u.n, v.n )  };
         edgeDist.push(e);
       }
 	  tick();
@@ -302,15 +343,15 @@ function mst() {
 	 */
       var forest = new MakeSet( nodes.length );
       edgeDist.sort( function(a, b) { return a.weight- b.weight; } );
-	  var i = 0;
-		setTimeout(function(){
-			mst_step(edgeDist, forest, finalEdge, i);
-		}, delay)
-	  return;
+      var i = 0;
+      setTimeout(function(){
+        mst_kruskal_step(edgeDist, forest, finalEdge, i);
+      }, delay)
+      return;
 	  
       for (var i=0; i<edgeDist.length; i++)
       {
-		mst_step(edgeDist, forest, finalEdge, i);
+        mst_kruskal_step(edgeDist, forest, finalEdge, i);
       }
       
       for (var ind in finalEdge)
