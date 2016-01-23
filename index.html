@@ -45,9 +45,17 @@ text {
   pointer-events: none;
   text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
 }
+input {
+  float:left;
+}
 textarea {
   float:left;
-  height:496px;
+  height:476px;
+    margin-left: -173px;
+    margin-top: 20px;  
+}
+g.circle {
+  z-index:9;
 }
 </style>
 <body>
@@ -74,13 +82,13 @@ var force = d3.layout.force()
 //    .links(links)
     .size([width, height])
 //    .linkDistance(60)
-    .gravity(0.01)
+    .gravity(0.1)
     .charge(-600)
     .on("tick", tick)
     .linkDistance(function(link){
       //return 60;
       var s=link.source, t= link.target;
-	  return dist( s.n, t.n )
+	  return dist( parseInt(s.name), parseInt(t.name) )
       //return Math.sqrt(Math.pow(s.x0 - t.x0,2) + Math.pow(s.y0 - t.y0,2));
     })
     .start();
@@ -91,25 +99,36 @@ var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
 	.on("click", function(){
-		var _addNode = false;
+		var addNode1 = true;
+		var addNode2 = true;
+    var skipLink = false;
 		d3.event.preventDefault();
 		d3.event.stopPropagation();
 		if(mst_in_progress) return false;
-		if(N < 2) {
-			addNode();
-			return false;
-		}
+    
+    var s = 0;
+    var t = 1;
 		
-		var s = Math.floor(Math.random() * N);
-		var t = Math.floor(Math.random() * N);
+		if(N > 1) {
+      s = Math.floor(Math.random() * N*2);
+      do {
+        t = Math.floor(Math.random() * N*2);
+      } while(s == t);
+    }
+    var ss = s + 1;
+    var tt = t + 1;
+		for (var ind in nodes) { // check if node with same name exists
+      if(nodes[ind].name == ss) { s = parseInt(ind); addNode1 = false};
+      if(nodes[ind].name == tt) { t = parseInt(ind); addNode2 = false};
+    }
 		for (var ind in links) {
-			if (s == t) _addNode = true;
-			if (links[ind].source.n == s && links[ind].target.n == t) _addNode = true;
-			if (links[ind].source.n == t && links[ind].target.n == s) _addNode = true;
+			if (links[ind].source.n == s && links[ind].target.n == t) skipLink = true;
+			if (links[ind].source.n == t && links[ind].target.n == s) skipLink = true;
 		}
-		if (_addNode)
-			addNode();
-		else {
+		if (addNode1) s = addNode(ss);
+		if (addNode2) t = addNode(tt);
+      
+		if(!skipLink){
 			link = addLink(s,t);
       fixCycle(t, s, link);
     }
@@ -122,6 +141,37 @@ svg.append("defs").selectAll("marker")
   .append("path")
     .attr("d", "M0,-5L10,0L0,5");
 
+  var textarea = d3.select("body").append("input").on("keyup", function(e){
+    if(d3.event.which == 13) {
+      var edge = this.value.split(/[,\/ -]/);
+      if(edge.length==2) {
+        edge[0] = parseInt(edge[0]);
+        edge[1] = parseInt(edge[1]);
+        if (edge[0] == edge[1]) return;
+        var found1 = -1;
+        var found2 = -1;
+        for(var ind in nodes) {
+          if(nodes[ind].name == edge[0]) found1 = parseInt(ind);
+          if(nodes[ind].name == edge[1]) found2 = parseInt(ind);
+        }
+        if( found1 >=0 && found2 >=0) {
+        		for (var ind in links) {
+              if (links[ind].source.n == found1 && links[ind].target.n == found2) return;
+              if (links[ind].source.n == found2 && links[ind].target.n == found1) return;
+            }
+        }
+        if (found1 < 0) {
+          found1 =addNode(edge[0]);
+        }
+        if (found2 <0) {
+          found2 = parseInt(addNode(edge[1]));
+        }        
+        link = addLink(found1, found2);
+        fixCycle(found2, found1, link);
+        this.value = '';
+      }
+    }
+  }).attr("placeholder", "Add edge: ex: 10 - 43 ");
   var textarea = d3.select("body").append("textarea");
 	
 
@@ -152,13 +202,18 @@ function transform(d) {
   return "translate(" + d.x + "," + d.y + ")";
 }
 
-function addNode(){
+function addNode(name){
     if(mst_in_progress) return false;
-
-
-	var node = {name: N, n:N, x:d3.event.offsetX, y:d3.event.offsetY , x0:d3.event.offsetX, y0:d3.event.offsetY};
+  if(name == undefined) name = N+1;
+  console.log(d3.event);
+	var node = {};
+  if (d3.event.type == "click" )
+    node = {name: name, n:N, x:d3.event.offsetX, y:d3.event.offsetY};
+  else
+    node = {name: name, n:N};
+    
 	nodes.push(node);
-	svg.append("g").selectAll("circle")
+	svg.append("g").attr("class","circle").selectAll("circle")
       .data([node])
       .enter().append("circle")
 	  .attr("r", 8)
@@ -166,19 +221,18 @@ function addNode(){
 	  
 	  .on("click", function(d) {
 	  	d3.event.stopPropagation();
-		return false;
-		/*
       if(selectedNode == -1) {
         selectedNode = d.n;
       } else if (selectedNode == d.n) {
         selectedNode = -1;
       } else {
-        addLink(selectedNode, d.n);
+        link = addLink(selectedNode, d.n);
+        fixCycle(d.n, selectedNode, link);
         //addLink(d.n,selectedNode);
         selectedNode = -1;
       }
       d3.event.stopPropagation();
-	  */});
+	  });
 	  
 	svg.append("g").selectAll("text")
 		.data([node])
@@ -186,22 +240,27 @@ function addNode(){
 		.attr("x", 10)
 		.attr("y", ".31em")
 		.text(function(d) { return d.name; });	  
+    /*
     if(N > 0) {
-      link = addLink(N, Math.floor((Math.random() * N)));
+      var s = N;
+      var t = Math.floor((Math.random() * N));
+      link = addLink(s, t);
       link.mst = 1;
-      MST.push(link);
+      //MST.push(link);
+      fixCycle(t, s, link)
     }
+    */
 	N++;
 	delay = (1000 / N)*2;
 	force.start();
+  return node.n;
 }
 
 function addLink(s, t) {
 	//console.log(s,t, d3.select("textarea")[0][0].value );
-  var ss = (s+1);
-  var tt = (t+1)
-  d3.select("textarea")[0][0].value = ss + " - " + tt + "\n" + d3.select("textarea")[0][0].value;
-	link = {source: s, target: t, weight: dist( s, t )};
+  var ss = nodes[s].name;
+  d3.select("textarea")[0][0].value = nodes[s].name + " - " + nodes[t].name + "\n" + d3.select("textarea")[0][0].value;
+	link = {source: s, target: t, weight: dist( parseInt(nodes[s].name), parseInt(nodes[t].name) )};
 	links.push(link);
 //	svg.append("g").selectAll("path")
 	svg.append("g").selectAll("line")
@@ -216,8 +275,8 @@ function addLink(s, t) {
 
 function findEdgeInMST(s) {
   for (ind in MST) {
-    if (MST[ind].source.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].target.n]; }
-    if (MST[ind].target.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].source.n]; }
+    if (MST[ind].source.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].target.n, ind]; }
+    if (MST[ind].target.n == s && !MST[ind].visited) { MST[ind].visited = true; return [MST[ind], MST[ind].source.n, ind]; }
   }
   return [-1, -1];
 }
@@ -226,7 +285,7 @@ function traversePath(v, t, path) {
   while(true) {
     var edge = findEdgeInMST(v);
     if(edge[0] == -1) return -1;
-    var new_path = traversePath(edge[1], t, path.concat([ edge[0] ]));
+    var new_path = traversePath(edge[1], t, path.concat([ edge ]));
     if(new_path !== -1) return new_path;
   }
   return -1;
@@ -237,10 +296,17 @@ function fixCycle(s, t, link) {
       MST[ind].visited = false;
   }
   path = traversePath(s, t, []);
-  path.sort( function(a, b) { return a.weight - b.weight; } );
+  if(path === -1 || path.length == 0) {
+    link.mst = true;
+    MST.push(link);
+    tick();
+    return;
+  }
+  path.sort( function(a, b) { return a[0].weight - b[0].weight; } );
   console.log(path);
-  if(path[path.length-1].weight > link.weight) {
-    path[path.length-1].mst = false;
+  if(path[path.length-1][0].weight > link.weight) {
+    path[path.length-1][0].mst = false;
+    MST.splice(path[path.length-1][2], 1);
     link.mst = true;
     MST.push(link);
     tick();
