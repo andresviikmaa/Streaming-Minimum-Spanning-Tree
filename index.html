@@ -60,7 +60,11 @@ g.circle {
 </style>
 <body>
 <script src="https://d3js.org/d3.v3.min.js"></script>
-<pre>Left click on empty area to add new edge to graph</pre>
+<script src="link-cut-tree-lca.js"></script>
+<pre>Left click on empty area to add new edge to graph
+or click on two nodes to connect them
+or enter edge manually into text box
+</pre>
 <script>
 var mst_in_progress = false;
 function dist( a, b )
