@@ -52,7 +52,22 @@ LinkCutTree = function() {
           LCT[v].L = -1;
       }
   }
+/*
 
+  public static void cut(Node x, Node y) {
+    makeRoot(x);
+    expose(y);
+    // check that exposed path consists of a single edge (y,x)
+    if (y.right != x || x.left != null)
+      throw new RuntimeException("error: no edge (x,y)");
+    y.right.parent = null;
+    y.right = null;
+  }
+  public static void makeRoot(Node x) {
+    expose(x);
+    x.revert = !x.revert;
+  }
+*/
   function expose( v)
   {
       if (v == -1) return;
