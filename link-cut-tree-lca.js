@@ -9,8 +9,15 @@ LinkCutTree = function() {
       if(find_root(s) != find_root(t)) { // different component
         link(s,t);
         edge.mst = true;
-      } else {
-        edge.mst = false;
+      } else { //same component, adding edge creates cycle
+        if(edge.weight < 0 /* max_edge(s, t)*/) {
+          cut(u, v);
+          link(s, t);
+          edge.mst = true;
+        } else { // edge weight i
+          edge.mst = false;
+        }
+        
       }
   }
   /*
