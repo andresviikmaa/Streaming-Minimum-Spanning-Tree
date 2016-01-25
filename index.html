@@ -1,66 +1,9 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<style>
-
- svg {
-	border: 1px dotted black;
-  float:left
-  
- }
- svg.busy {
-     background: rgba(255,0,0,0.03);
- }
-.link {
-  fill: none;
-  stroke: #666;
-  stroke-width: 1.5px;
-}
-
-#licensing {
-  fill: green;
-}
-
-.link.no_mst {
-  stroke: #cc0000;
-}
-.link.mst {
-  stroke: #00ff00;
-}
-
-.link.resolved {
-  stroke-dasharray: 0,2 1;
-}
-
-circle {
-  fill: #ccc;
-  stroke: #333;
-  stroke-width: 1.5px;
-}
-circle.selected {
-  fill: green;
-}
-
-text {
-  font: 10px sans-serif;
-  pointer-events: none;
-  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
-}
-input {
-  float:left;
-}
-textarea {
-  float:left;
-  height:476px;
-    margin-left: -173px;
-    margin-top: 20px;  
-}
-g.circle {
-  z-index:9;
-}
-</style>
+<link href="UI.css" rel="stylesheet">
 <body>
 <script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="mst-naive.js"></script>
+<script src="link-cut-tree-lca.js"></script>
 <script src="UI.js"></script>
 
 <pre>Left click on empty area to add new edge to graph
@@ -68,7 +11,7 @@ or click on two nodes to connect them
 or enter edge manually into text box
 </pre>
 <script>
-var MST = new MstNaive();
+var MST = new LinkCutTree();
 var ui=new UI(function(s,t, link) {
   MST.addEdge(s,t, link);
 });

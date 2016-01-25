@@ -1,126 +1,148 @@
-// Converted to JavaScript from https://sites.google.com/site/indy256/algo/link-cut-tree-lca
-// Based on Daniel Sleator's implementation http://www.codeforces.com/contest/117/submission/860934
-LinkCutTreeLca = function() {
+// https://github.com/PetarV-/Algorithms/blob/master/Data%20Structures/Link-cut%20Tree.cpp
 
-  Node = function() {
-    /*Node*/ var left = null;
-    /*Node*/ var right = null;
-    /*Node*/ var parent = null;
+LinkCutTree = function() {
+  var LCT = {}; // should be fixed size array
 
-    // tests whether x is a root of a splay tree
-    this.isRoot = function() {
-      return parent == null || (parent.left != this && parent.right != this);
-    }
+  this.addEdge = function(s, t, edge) {
+      if(!(s in LCT)) make_tree(s);
+      if(!(t in LCT)) make_tree(t);
+      if(find_root(s) != find_root(t)) { // different component
+        link(s,t);
+        edge.mst = true;
+      } else {
+        edge.mst = false;
+      }
+  }
+  /*
+  struct Node
+  {
+      int L, R, P;
+      int PP;
   };
+  */
 
-  /* static */ this.connect = function(/*Node */ch, /*Node */p, /*Boolean */isLeftChild) {
-    if (ch != null)
-      ch.parent = p;
-    if (isLeftChild != null) {
-      if (isLeftChild)
-        p.left = ch;
+  function make_tree(v) {
+    if (v == -1) return;
+    LCT[v] = { L: -1, R: -1, P: -1, PP: -1 }; // struct Node
+  }
+  
+  function link( v,  w) // attach v's root to w
+  {
+    if (v == -1 || w == -1) return;
+    expose(w);
+    LCT[v].L = w; // the root can only have right children in its splay tree, so no need to check
+    LCT[w].P = v;
+    LCT[w].PP = -1;
+  }
+  function cut(v)
+  {
+      if (v == -1) return;
+      expose(v);
+      if (LCT[v].L != -1)
+      {
+          LCT[LCT[v].L].P = -1;
+          LCT[LCT[v].L].PP = -1;
+          LCT[v].L = -1;
+      }
+  }
+
+  function expose( v)
+  {
+      if (v == -1) return;
+      splay(v); // now v is root of its aux. tree
+      if (LCT[v].R != -1)
+      {
+          LCT[LCT[v].R].PP = v;
+          LCT[LCT[v].R].P = -1;
+          LCT[v].R = -1;
+      }
+      while (LCT[v].PP != -1)
+      {
+          var w = LCT[v].PP;
+          splay(w);
+          if (LCT[w].R != -1)
+          {
+              LCT[LCT[w].R].PP = w;
+              LCT[LCT[w].R].P = -1;
+          }
+          LCT[w].R = v;
+          LCT[v].P = w;
+          splay(v);
+      }
+  }  
+  function splay( v)
+  {
+      if (v == -1) return;
+      while (LCT[v].P != -1)
+      {
+          var p = LCT[v].P;
+          var g = LCT[p].P;
+          if (g == -1) // zig
+          {
+              rotate(v);
+          }
+          else if ((LCT[p].L == v) == (LCT[g].L == p)) // zig-zig
+          {
+              rotate(p);
+              rotate(v);
+          }
+          else // zig-zag
+          {
+              rotate(v);
+              rotate(v);
+          }
+      }
+  }
+  function rotate( v)
+  {
+      if (v == -1) return;
+      if (LCT[v].P == -1) return;
+      var p = LCT[v].P;
+      var g = LCT[p].P;
+      if (LCT[p].L == v)
+      {
+          LCT[p].L = LCT[v].R;
+          if (LCT[v].R != -1)
+          {
+              LCT[LCT[v].R].P = p;
+          }
+          LCT[v].R = p;
+          LCT[p].P = v;
+      }
       else
-        p.right = ch;
-    }
+      {
+          LCT[p].R = LCT[v].L;
+          if (LCT[v].L != -1)
+          {
+              LCT[LCT[v].L].P = p;
+          }
+          LCT[v].L = p;
+          LCT[p].P = v;
+      }
+      LCT[v].P = g;
+      if (g != -1)
+      {
+          if (LCT[g].L == p)
+          {
+              LCT[g].L = v;
+          }
+          else
+          {
+              LCT[g].R = v;
+          }
+      }
+      // must preserve path-pointer!
+      // (this only has an effect when g is -1)
+      LCT[v].PP = LCT[p].PP;
+      LCT[p].PP = -1;
   }
-
-  // rotates edge (x, x.parent)
-  //        g           g
-  //       /           /
-  //      p           x
-  //     / \   -->   / \
-  //    x  p.r     x.l  p
-  //   / \             / \
-  // x.l x.r         x.r p.r
-  /*static void */  this.rotate = function(/*Node*/ x) {
-    /*Node */ var p = x.parent;
-    /*Node */ var g = p.parent;
-    /*boolean*/ var isRootP = p.isRoot();
-    /*boolean*/ var leftChildX = (x == p.left);
-
-    // create 3 edges: (x.r(l),p), (p,x), (x,g)
-    this.connect(leftChildX ? x.right : x.left, p, leftChildX);
-    this.connect(p, x, !leftChildX);
-    this.connect(x, g, !isRootP ? p == g.left : null);
+  function find_root( v)
+  {
+      if (v == -1) return -1;
+      expose(v);
+      var ret = v;
+      while (LCT[ret].L != -1) ret = LCT[ret].L;
+      expose(ret);
+      return ret;
   }
-
-  // brings x to the root, balancing tree
-  //
-  // zig-zig case
-  //        g                                  x
-  //       / \               p                / \
-  //      p  g.r rot(p)    /   \     rot(x) x.l  p
-  //     / \      -->    x       g    -->       / \
-  //    x  p.r          / \     / \           x.r  g
-  //   / \            x.l x.r p.r g.r             / \
-  // x.l x.r                                    p.r g.r
-  //
-  // zig-zag case
-  //      g               g
-  //     / \             / \               x
-  //    p  g.r rot(x)   x  g.r rot(x)    /   \
-  //   / \      -->    / \      -->    p       g
-  // p.l  x           p  x.r          / \     / \
-  //     / \         / \            p.l x.l x.r g.r
-  //   x.l x.r     p.l x.l
-  /*static void*/ this.splay = function(/*Node */x) {
-    while (!x.isRoot()) {
-      /*Node*/ var p = x.parent;
-      /*Node*/ var g = p.parent;
-      if (!p.isRoot())
-        this.rotate((x == p.left) == (p == g.left) ? p/*zig-zig*/ : x/*zig-zag*/);
-      this.rotate(x);
-    }
-  }
-
-  // makes node x the root of the virtual tree, and also x becomes the leftmost node in its splay tree
-  /*static Node */this.expose = function(/*Node */x) {
-    /*Node */ var last = null;
-    for (/*Node*/ var y = x; y != null; y = y.parent) {
-      this.splay(y);
-      y.left = last;
-      last = y;
-    }
-    this.splay(x);
-    return last;
-  }
-
-  /*public static Node */ this.findRoot = function(/*Node*/ x) {
-    expose(x);
-    while (x.right != null)
-      x = x.right;
-    splay(x);
-    return x;
-  }
-
-  /*public static void */ this.link = function(/*Node*/ x, /*Node*/ y) {
-    if (findRoot(x) == findRoot(y))
-      throw new RuntimeException("error: x and y are already connected");
-    expose(x);
-    if (x.right != null)
-      throw new RuntimeException("error: x is not a root node");
-    x.parent = y;
-  }
-
-  /*public static void */ this.cut = function(/*Node*/ x) {
-    expose(x);
-    if (x.right == null)
-      throw new RuntimeException("error: x is a root node");
-    x.right.parent = null;
-    x.right = null;
-  }
-
-  /*public static Node */ this.lca = function(/*Node*/ x, /*Node*/ y) {
-    if (findRoot(x) != findRoot(y))
-      throw new RuntimeException("error: x and y are not connected");
-    expose(x);
-    return expose(y);
-  }
-
-  /*static int */ this.root = function(/*int[] */p, /*int */u) {
-    /*int*/var root = u;
-    while (p[root] != -1)
-      root = p[root];
-    return root;
-  }
-}
+};
