@@ -27,7 +27,6 @@ MstNaive = function() {
       if(path === -1 || path.length == 0) {
         link.mst = true;
         this.edges.push(link);
-        tick();
         return;
       }
       path.sort( function(a, b) { return a[0].weight - b[0].weight; } );
@@ -37,11 +36,12 @@ MstNaive = function() {
         this.edges.splice(path[path.length-1][2], 1);
         link.mst = true;
         this.edges.push(link);
-        tick();
         return;
       }
       link.mst = false;
 
         
   }
+  this.select = function(v) {
+  }  
 }

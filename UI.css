@@ -8,7 +8,6 @@
      background: rgba(255,0,0,0.03);
  }
 .link {
-  fill: none;
   stroke: #666;
   stroke-width: 1.5px;
 }
@@ -53,3 +52,14 @@ textarea {
 }
 g.circle {
   z-index:9;
+}
+
+.left {
+  stroke: green;
+}
+.right {
+  stroke: red;
+}
+.path {
+  stroke: blue;
+}

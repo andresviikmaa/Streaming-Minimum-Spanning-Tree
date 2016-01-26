@@ -1,5 +1,4 @@
-UI = function(edgeAddedCallback){
-  this.edgeAddedCallback = edgeAddedCallback;
+UI = function(edgeAddedCallback, selectNodeCallback){
   var mst_in_progress = false;
 function dist( a, b )
 {
@@ -36,6 +35,8 @@ var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
 	.on("click", function(){
+    if(d3.event.ctrlKey) return;
+    
 		var addNode1 = true;
 		var addNode2 = true;
     var skipLink = false;
@@ -140,7 +141,6 @@ function transform(d) {
 function addNode(name){
     if(mst_in_progress) return false;
   if(name == undefined) name = N+1;
-  console.log(d3.event);
 	var node = {};
   if (d3.event.type == "click" )
     node = {name: name, n:N, x:d3.event.offsetX, y:d3.event.offsetY};
@@ -156,15 +156,20 @@ function addNode(name){
 	  
 	  .on("click", function(d) {
 	  	d3.event.stopPropagation();
-      if(selectedNode == -1) {
-        selectedNode = d.n;
-      } else if (selectedNode == d.n) {
-        selectedNode = -1;
+      if(d3.event.ctrlKey) {
+        if(selectedNode == -1) {
+          selectedNode = d.n;
+        } else if (selectedNode == d.n) {
+          selectedNode = -1;
+        } else {
+          link = addLink(selectedNode, d.n);
+          selectedNode = -1;
+        }
+        d3.event.stopPropagation();
+        tick();
       } else {
-        link = addLink(selectedNode, d.n);
-        selectedNode = -1;
+        MST.select(d.n);
       }
-      d3.event.stopPropagation();
 	  });
 	  
 	svg.append("g").selectAll("text")
@@ -172,7 +177,7 @@ function addNode(name){
 		.enter().append("text")
 		.attr("x", 10)
 		.attr("y", ".31em")
-		.text(function(d) { return d.name; });	  
+		.text(function(d) { return d.name + "("+d.n+")"; });	  
     /*
     if(N > 0) {
       var s = N;
@@ -193,20 +198,38 @@ function addLink(s, t) {
 	//console.log(s,t, d3.select("textarea")[0][0].value );
   var ss = nodes[s].name;
   d3.select("textarea")[0][0].value = nodes[s].name + " - " + nodes[t].name + "\n" + d3.select("textarea")[0][0].value;
-	link = {source: s, target: t, weight: dist( parseInt(nodes[s].name), parseInt(nodes[t].name) )};
+	link = {source: nodes[s], target: nodes[t], weight: dist( parseInt(nodes[s].name), parseInt(nodes[t].name) )};
 	links.push(link);
 //	svg.append("g").selectAll("path")
 	svg.append("g").selectAll("line")
     .data([link])
 	.enter().append("line")
-    .attr("class", function(d) { return "link " + (d.mst ? 'mst' : ''); })
+    .attr("class", function(d) { return "link ui " + (d.mst ? 'mst' : ''); })
 //    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
+  MST.addEdge(s, t, link);
 	force.start();
-  MST.addEdge(t, s, link);
   return link;
   //mst_kruskal();
 }
 
-
+this.OnMstChange = function(s,t,mst) {
+  
+    for (var ind in links) {
+			if (links[ind].source.n == s && links[ind].target.n == t) {
+          if(links[ind].weight == 60) {
+            alert("Sorry, but you found the first bug from our code!");
+          };
+          links[ind].mst = mst; tick();
+          return;
+      };
+			if (links[ind].source.n == t && links[ind].target.n == s) {
+         if(links[ind].weight == 60) {
+            alert("Sorry, but you found the first bug from our code!");
+          };
+          links[ind].mst = mst; tick();
+          return;
+      };
+		}
+}
 
 }

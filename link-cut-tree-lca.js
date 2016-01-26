@@ -1,24 +1,57 @@
 // https://github.com/PetarV-/Algorithms/blob/master/Data%20Structures/Link-cut%20Tree.cpp
 
-LinkCutTree = function() {
+LinkCutTree = function(visualization) {
+  var viz = visualization;
   var LCT = {}; // should be fixed size array
-
+window.LCT = LCT;
   this.addEdge = function(s, t, edge) {
-      if(!(s in LCT)) make_tree(s);
-      if(!(t in LCT)) make_tree(t);
+      if(!(s in LCT)) make_tree(s, edge.source.name);
+      if(!(t in LCT)) make_tree(t, edge.target.name);
       if(find_root(s) != find_root(t)) { // different component
         link(s,t);
+        modify(s, t, edge.weight);
         edge.mst = true;
       } else { //same component, adding edge creates cycle
-        if(edge.weight < 0 /* max_edge(s, t)*/) {
-          cut(u, v);
-          link(s, t);
-          edge.mst = true;
-        } else { // edge weight i
           edge.mst = false;
-        }
-        
       }
+  }
+  this.cut = function(v) {
+    cut(v);
+     vis.update(LCT);
+    
+  }
+  this.splay = function(v){
+    splay(v);
+     vis.update(LCT);
+  }
+  this.expose = function(v){
+    expose(v);
+     vis.update(LCT);
+  }
+  this.find_root = function(v){
+    var x = find_root(v);
+    console.log(x);
+     vis.update(LCT);
+  }  
+  this.select = function(v) {
+     expose(v);
+     vis.update(LCT);
+     
+  }
+  
+  function findMaxEdge(v, maxw){
+    console.log("findMaxEdge", v);
+    var u = v;
+    var x = v;
+    expose(v);
+    while(LCT[x].L != -1) {
+      console.log(x, LCT[x].w, LCT[x].dw);
+      x = LCT[x].L;
+      if (LCT[x].w > maxw) {
+        u = x;
+      }
+    }
+    return u;
   }
   /*
   struct Node
@@ -27,10 +60,45 @@ LinkCutTree = function() {
       int PP;
   };
   */
+    function push(v) {
+      return;
+      if (LCT[v].revert) {
+        LCT[v].revert = false;
+        var t = LCT[v].L;
+        console.log(v,t);
+        LCT[v].L = LCT[v].R;
+        LCT[v].R = t;
+        if (LCT[v].L != -1)
+          LCT[LCT[v].L].revert = !LCT[LCT[v].L].revert;
+        if (LCT[v].R != -1)
+          LCT[LCT[v].R].revert = !LCT[LCT[v].R].revert;
+      }
+      LCT[v].w =  LCT[v].w +  LCT[v].dw;
+      if(LCT[v].L != -1)
+          LCT[LCT[v].L].dw = LCT[LCT[v].L].dw + LCT[v].dw;
+      if(LCT[v].R != -1)
+          LCT[LCT[v].R].dw = LCT[LCT[v].R].dw + LCT[v].dw;
+      LCT[v].dw = 0;
+      
+      /*
+      nodeValue = joinValueWithDelta(nodeValue, delta);
+      subTreeValue = joinValueWithDelta(subTreeValue, deltaEffectOnSegment(delta, size));
+      if (left != null)
+        left.delta = joinDeltas(left.delta, delta);
+      if (right != null)
+        right.delta = joinDeltas(right.delta, delta);
+      delta = getNeutralDelta();
+      */
+    }
 
-  function make_tree(v) {
+    function update() {
+      //subTreeValue = queryOperation(queryOperation(getSubTreeValue(left), joinValueWithDelta(nodeValue, delta)), getSubTreeValue(right));
+      //size = 1 + getSize(left) + getSize(right);
+    }  
+
+  function make_tree(v, name) {
     if (v == -1) return;
-    LCT[v] = { L: -1, R: -1, P: -1, PP: -1 }; // struct Node
+    LCT[v] = { L: -1, R: -1, P: -1, PP: -1, w:0, dw: 0, revert: false, name:name }; // struct Node
   }
   
   function link( v,  w) // attach v's root to w
@@ -40,6 +108,7 @@ LinkCutTree = function() {
     LCT[v].L = w; // the root can only have right children in its splay tree, so no need to check
     LCT[w].P = v;
     LCT[w].PP = -1;
+    viz.update(LCT);
   }
   function cut(v)
   {
@@ -52,22 +121,30 @@ LinkCutTree = function() {
           LCT[v].L = -1;
       }
   }
-/*
-
-  public static void cut(Node x, Node y) {
+  /*
+  function cut(x, y) {
     makeRoot(x);
     expose(y);
     // check that exposed path consists of a single edge (y,x)
-    if (y.right != x || x.left != null)
+    if (LCT[y].R != x || LCT[x].L != null)
       throw new RuntimeException("error: no edge (x,y)");
-    y.right.parent = null;
-    y.right = null;
+    LCT[LCT[y].R].P = -1;
+    LCT[LCT[y].R].PP = -1;
+    LCT[y].R = -1;
   }
-  public static void makeRoot(Node x) {
+  */
+  function makeRoot(x) {
     expose(x);
-    x.revert = !x.revert;
+    LCT[x].revert = !LCT[x].revert;
   }
-*/
+  
+  function modify( x, y, delta) {
+    return;
+    makeRoot(x);
+    expose(y);
+    LCT[y].dw += delta;
+  }  
+
   function expose( v)
   {
       if (v == -1) return;
@@ -99,21 +176,29 @@ LinkCutTree = function() {
       {
           var p = LCT[v].P;
           var g = LCT[p].P;
+          
           if (g == -1) // zig
           {
+              push(v);
               rotate(v);
           }
           else if ((LCT[p].L == v) == (LCT[g].L == p)) // zig-zig
           {
+              push(p);
+              push(v);
               rotate(p);
               rotate(v);
           }
           else // zig-zag
           {
+              push(p);
+              push(v);
               rotate(v);
               rotate(v);
           }
       }
+
+      //update(v)
   }
   function rotate( v)
   {
@@ -167,4 +252,5 @@ LinkCutTree = function() {
       expose(ret);
       return ret;
   }
+  
 };

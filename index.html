@@ -2,18 +2,27 @@
 <meta charset="utf-8">
 <link href="UI.css" rel="stylesheet">
 <body>
-<script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="link-cut-tree-lca.js"></script>
+<script src="https://d3js.org/d3.v3.js"></script>
+<script src="link-cut-tree2.js"></script>
+<script src="lct-vis.js"></script>
 <script src="UI.js"></script>
 
 <pre>Left click on empty area to add new edge to graph
-or click on two nodes to connect them
+or ctrl+click on two nodes to connect them
 or enter edge manually into text box
 </pre>
 <script>
-var MST = new LinkCutTree();
-var ui=new UI(function(s,t, link) {
-  MST.addEdge(s,t, link);
-});
+var vis = new LCTVis();
+var MST = new LinkCutTree(vis);
+var ui =new UI();
+MST.onChange = function(u,v, inMST) {
+  ui.OnMstChange(u,v, inMST);
+}
 </script>
 <a href="https://github.com/andresviikmaa/Streaming-Minimum-Spanning-Tree" target="_blank"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/652c5b9acfaddf3a9c326fa6bde407b87f7be0f4/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6f72616e67655f6666373630302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>   
+
+<br style="clear:both">
+Other versions:<br>
+<a href="naive.html">Correctly working brute force version</a><br>
+<a href="index_lct1.html">Streaming not-Minimum Spanning tree</a><br>
+<a href="index.html">Streaming (but buggy) Minimum Spanning tree</a><br>
