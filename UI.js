@@ -177,7 +177,7 @@ function addNode(name){
 		.enter().append("text")
 		.attr("x", 10)
 		.attr("y", ".31em")
-		.text(function(d) { return d.name + "("+d.n+")"; });	  
+		.text(function(d) { return d.name; });	  
     /*
     if(N > 0) {
       var s = N;

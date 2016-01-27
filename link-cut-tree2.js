@@ -11,6 +11,8 @@ LinkCutTree = function(visualization) {
       if (!connected(LCT[s], LCT[t])) {
         link(LCT[s], LCT[t]);
         modify(LCT[s], LCT[t], edge.weight);
+        LCT[s].edges[t] = edge;
+        LCT[t].edges[s] = edge;
         edge.mst = true;
       } else {
         console.log("check path, ", LCT[s].name, LCT[t].name);
@@ -24,26 +26,26 @@ LinkCutTree = function(visualization) {
             console.log(path[i].name, path[i].revert, path[i].nodeValue, path[i].subTreeValue, path[i].edgeValue, path[i].size);
       
             if(i>0) {
-              // check that path exists
-              var x = path[i];
-              var y = path[i-1];
-              makeRoot(x);
-              expose(y);
-              // check that exposed path consists of a single edge (y,x)
-              if (y.right != x || x.left != null){
-                alert("Sorry, but you found the second bug from our code!");
-                edge.mst = -1;
-                return;
+              if(!checkPath(LCT[i-1],LCT[i]) && i < path.lenght-1) {
+                // swap nodes in path
+                console.log("Fixig path from ", path[i-1], '->', path[i], 'to', path[i-1], '->', path[i+1]);
+                var tmp = path[i];
+                path[j] = path[i];
+                path[i] = path[j];
+                if(!checkPath(LCT[i-1],LCT[i])) {
+                  alert("Sorry, but you found the second bug from our code!");
+                }
               }
-
-            
-              if( path[i].edgeValue > maxValue) {
-                maxValue = path[i].edgeValue;
+			  console.log("edge form ",  LCT[i-1].n,  LCT[i-1].edges, LCT[i].edges, "next", LCT[i].n);
+			  //console.log("edge form ",  LCT[i-1].n,  LCT[i-1].edges, LCT[i-1].edges[i].weight, "next", LCT[i].n);
+              if(LCT[i-1].edges[i] && LCT[i-1].edges[i].weight > maxValue) {
+                maxValue = LCT[i-1].edges[i].weight; //path[i].edgeValue;
                 ii = i-1;
                 jj = i;
               }
             }
         }
+		console.log("max", maxValue, edge.weight);
         if (maxValue > edge.weight) {
           console.log("must cut:" , path[ii].name , "->", path[jj].name);
           cut(path[ii], path[jj]);
@@ -51,7 +53,9 @@ LinkCutTree = function(visualization) {
             this.onChange(path[ii].n, path[jj].n, false);
           }
           link(LCT[s], LCT[t]);
-          modify(LCT[s], LCT[t], edge.weight);          
+          modify(LCT[s], LCT[t], edge.weight); 
+          LCT[s].edges[t] = edge;
+          LCT[t].edges[s] = edge;
           edge.mst = true;
         } else {
           edge.mst = false;          
@@ -117,7 +121,7 @@ LinkCutTree = function(visualization) {
     this.parent = null;
     this.n = id;
     this.name = name;
-    
+    this.edges = {};
     
     this.getPath = function(incomingEdgeValue) {
       this.edgeValue = incomingEdgeValue;
@@ -164,8 +168,12 @@ LinkCutTree = function(visualization) {
       this.size = 1 + getSize(this.left) + getSize(this.right);
     }
   }
-  function getPath(x, y) {
-    
+  function checkPath(x, y) {
+      makeRoot(x);
+      expose(y);
+      // check that exposed path consists of a single edge (y,x)
+      return (y.right != x || x.left != null);
+      
   }
   function getSize(root) {
     return root == null ? 0 : root.size;

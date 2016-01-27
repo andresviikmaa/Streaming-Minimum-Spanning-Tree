@@ -106,7 +106,7 @@ function addNode(n, name){
 		.enter().append("text")
 		.attr("x", 10)
 		.attr("y", ".31em")
-		.text(function(d) { return d.name + "("+d.n+")"; });	  
+		.text(function(d) { return d.name; });	  
 
 	//force.start();
   return node.n;
