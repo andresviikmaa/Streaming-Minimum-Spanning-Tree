@@ -1,11 +1,14 @@
 package diskmat;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class StreamingMSTApp {
 	private final LinkCutTree tree = new LinkCutTree();
 	private final Map<Integer, Node> nodes = new TreeMap<>();
+	private final Set<Node> removedEdges = new HashSet<>();
 
 	public void addEdge(int vId, int wId, int newEdgeCost) {
 		if (!nodes.containsKey(vId)) {
@@ -32,8 +35,10 @@ public class StreamingMSTApp {
 				System.out.println("Current max " + currentMax + " is more than new edge cost " + newEdgeCost + ", cutting " + currentMax.id);
 				currentMax.cost = 0;
 				tree.cut(currentMax);
+				removedEdges.add(currentMax);
 				Node r = findRoot(wId);
 				tree.link(v, r);
+				System.out.println("REM " + removedEdges);
 			} else {
 				System.out.println("Not adding edge. New edge cost " + newEdgeCost + " > current max " + currentMax.id + " cost " + currentMax.cost);
 			}
@@ -53,7 +58,7 @@ public class StreamingMSTApp {
 	}
 
 	public void test() {
-		addEdge(1,4,1);
+		addEdge(1,4,3);
 		//addEdge(2, 5, 3);
 		//addEdge(2, 7, 7);
 		//addEdge(3, 2, 7);
@@ -72,10 +77,10 @@ public class StreamingMSTApp {
 		//findRoot(13);
 		addEdge(4,17,9);
 		//addEdge(23, 6, 7);
-		addEdge(4,13,1);
+		addEdge(4,13,3);
 		System.out.println(findRoot(13) + "," + findRoot(1));
 		System.out.println(findRoot(13) + " ," + findRoot(1));
-		addEdge(13,1,10);
+		addEdge(13,1,2);
 		System.out.println(nodes);
 		//findRoot(13);
 		//findRoot(3);
