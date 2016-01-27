@@ -36,19 +36,13 @@ public class LinkCutTree {
 	public Node link(Node v, Node w) {
 		access(v);
 		access(w);
-		w.dcost -= v.dcost;
 		w.left = v;
 		v.parent = w;
-		v.dmin = Math.min(
-					Math.min(0, minCost(w)),
-					minCost(v.right));
 		return v;
 	}
 
 	public void cut(Node v) { // cut left
 		access(v);
-		v.left.dcost += v.dcost;
-		v.dmin = minCost(v.right);
 		v.left.parent = null;
 		v.left = null;
 	}
@@ -60,41 +54,6 @@ public class LinkCutTree {
 		}
 		splay(v);
 		return v;
-	}
-
-	// expose v;
-	// add x to dcost(v);
-	public void addCost(Node v, int cost) {
-		access(v);
-		v.dcost = cost;
-		if (v.right != null) {
-			v.right.dcost -= cost;
-		}
-	}
-
-	public int min(Node v) {
-		access(v);
-		if (v.left != null) {
-			int leftminCost = v.left.dmin + v.left.dcost;
-			if (leftminCost < v.dcost) {
-				return leftminCost;
-			}
-		}
-		return v.dcost;
-	}
-
-	// Returns the vertex w of minimum cost on the path from v to the root
-	public Node findMin(Node v) {
-		access(v);
-		while (v.left != null) { // use deltacost deltamax to walk from v to w
-			v = v.left;
-		}
-		splay(v);
-		return v;
-	}
-
-	private int minCost(Node n) {
-		return (n == null) ? 0 : (n.dcost + n.dmin);
 	}
 
 	public void access (Node v) {
@@ -118,18 +77,10 @@ public class LinkCutTree {
 			}
 			w.right = vt;
 			vt.parent = w;
-			
-			vt.dcost -= w.dcost;
-			w.dmin = calcDmin(w);
-
 			vt.pathParentLink = null;
 			vt = w;
 		}
 		splay(v);
-	}
-
-	int calcDmin(Node v) {
-		return Math.min(0, Math.min(minCost(v.left), minCost(v.right)));
 	}
 
 	private void splay (Node v) {
@@ -169,7 +120,6 @@ public class LinkCutTree {
 			if (b != null) {
 				b.parent = p;
 			}
-			rotationUpdate(v, p, b);
 			v.right = p;
 			p.parent = v;
 		} else {
@@ -178,7 +128,6 @@ public class LinkCutTree {
 			if (b != null) {
 				b.parent = p;
 			}
-			rotationUpdate(v, p, b);
 			v.left = p;
 			p.parent = v;
 		}
@@ -187,17 +136,6 @@ public class LinkCutTree {
 			p.pathParentLink = null;
 		}
 		v.parent = null;
-	}
-
-	private void rotationUpdate(Node v, Node p, Node c) {
-		int initialVcost = v.dcost;
-		v.dcost +=p.dcost;
-		p.dcost = -initialVcost;
-		if (c != null) {
-			c.dcost += initialVcost;
-		}
-		v.dmin=calcDmin(v);
-		p.dmin=calcDmin(p);
 	}
 
 	private void zigzig(Node v) {
@@ -218,8 +156,6 @@ public class LinkCutTree {
 			p.parent=v;
 			p.right=g;
 			g.parent=p;
-			rotationUpdate(v, p, b);
-			rotationUpdate(v, g, c);
 		} else { // left rotate both
 			Node b = v.left;
 			Node c = p.left;
@@ -235,8 +171,6 @@ public class LinkCutTree {
 			p.parent=v;
 			p.left=g;
 			g.parent=p;
-			rotationUpdate(v, p, b);
-			rotationUpdate(v, g, c);
 		}
 	}
 
@@ -258,8 +192,6 @@ public class LinkCutTree {
 			p.parent = v;
 			v.left = g;
 			g.parent = v;
-			rotationUpdate(v, p, b);
-			rotationUpdate(v, g, c);
 		} else {
 			Node b = v.left;
 			Node c = v.right;
@@ -275,8 +207,6 @@ public class LinkCutTree {
 			p.parent = v;
 			v.right = g;
 			g.parent = v;
-			rotationUpdate(v, p, b);
-			rotationUpdate(v, g, c);
 		}
 	}
 

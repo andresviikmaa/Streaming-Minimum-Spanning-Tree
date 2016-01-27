@@ -3,8 +3,6 @@ package diskmat;
 public class Node {
 	public final int id;
 
-	public Integer dcost;
-	public Integer dmin;
 	public int cost;
 
 	// tree pointers
@@ -15,8 +13,6 @@ public class Node {
 
 	public Node(int id, int cost) {
 		this.id = id;
-		this.dcost = cost;
-		this.dmin = 0;
 		this.cost = cost;
 	}
 
@@ -40,8 +36,6 @@ public class Node {
 		}
 
 		return "Node [id=" + id 
-					+ ", dcost="+dcost
-					+ ", dmin="+dmin
 					+ ", cost="+cost
 					+ parentStr
 					+ (left == null ? "" : ", l=" + left.id)
