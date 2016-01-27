@@ -8,18 +8,21 @@ public class LinkCutTree {
 	 */
 	public Node calcMax(Node v) {
 		access(v);
+		System.out.println("calcmax " + v);
 		return calcMaxRec(v);
 	}
 	private Node calcMaxRec(Node v) {
 		int lCost = 0;
 		Node lMax = null;
 		if (v.left != null) {
+			System.out.println("calcmax l " + v.left);
 			lMax = calcMaxRec(v.left);
 			lCost = lMax.cost;
 		}
 		Node rMax = null;
 		int rCost = 0;
 		if (v.right != null) {
+			System.out.println("calcmax r " + v.right);
 			rMax = calcMaxRec(v.right);
 			rCost = rMax.cost;
 		}
