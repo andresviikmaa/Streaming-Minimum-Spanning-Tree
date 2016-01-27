@@ -7,22 +7,26 @@ public class LinkCutTree {
 	 * Travels the whole path (splay-tree) to calculate cost.
 	 * Expected v to be accessed.
 	 */
-	public Node calcMaxRec(Node v) {
+	public Node calcMax(Node v) {
+		access(v);
+		return calcMaxRec(v);
+	}
+	private Node calcMaxRec(Node v) {
 		int lCost = 0;
 		Node lMax = null;
 		if (v.left != null) {
 			lMax = calcMaxRec(v.left);
-			lCost = lMax.costToPath;
+			lCost = lMax.cost;
 		}
 		Node rMax = null;
 		int rCost = 0;
 		if (v.right != null) {
 			rMax = calcMaxRec(v.right);
-			rCost = rMax.costToPath;
+			rCost = rMax.cost;
 		}
-		if (v.costToPath >= Math.max(lCost, rCost)) {
+		if (v.cost >= Math.max(lCost, rCost)) {
 			return v;
-		} else if (lCost >= Math.max(v.costToPath, rCost) ) {
+		} else if (lCost >= Math.max(v.cost, rCost) ) {
 			return lMax;
 		} else {
 			return rMax;
@@ -51,9 +55,7 @@ public class LinkCutTree {
 
 	public Node findRoot(Node v) {
 		access(v);
-		int vId = v.id;
 		while (v.left != null) {
-			System.out.println("FindRoot for " + vId + ", " + v.id);
 			v = v.left;
 		}
 		splay(v);

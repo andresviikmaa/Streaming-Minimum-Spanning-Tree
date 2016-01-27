@@ -5,7 +5,7 @@ public class Node {
 
 	public Integer dcost;
 	public Integer dmin;
-	public int costToPath;
+	public int cost;
 
 	// tree pointers
 	public Node pathParentLink;
@@ -17,7 +17,7 @@ public class Node {
 		this.id = id;
 		this.dcost = cost;
 		this.dmin = 0;
-		this.costToPath = cost;
+		this.cost = cost;
 	}
 
 	@Override
@@ -42,7 +42,7 @@ public class Node {
 		return "Node [id=" + id 
 					+ ", dcost="+dcost
 					+ ", dmin="+dmin
-					+ ", cost="+costToPath
+					+ ", cost="+cost
 					+ parentStr
 					+ (left == null ? "" : ", l=" + left.id)
 					+ (right == null ? "" : ", r=" + right.id) 

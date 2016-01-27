@@ -16,24 +16,24 @@ public class StreamingMSTApp {
 		}
 		final Node v = nodes.get(vId);
 		final Node w = nodes.get(wId);
-		System.out.println("Adding new edge from " + v + " to " + w + " with cost " + newEdgeCost);
+		System.out.println("Adding new edge from " + v.id + " to " + w.id + " with cost " + newEdgeCost);
 		if (!tree.connected(v, w)) {
-			System.out.println(v + ", " + w + " not connected. Linking!");
+			System.out.println(v.id + ", " + w.id + " not connected. Linking!");
 			tree.link(v, w);
 		} else {
-			System.out.println(v + ", " + w + " already connected. Finding max!");
+			System.out.println(v.id + ", " + w.id + " already connected. Finding max!");
 
-			final Node currentMaxV = tree.calcMaxRec(v);
-			final Node currentMaxW = tree.calcMaxRec(w);
-			System.out.println("VMax=" + currentMaxV + ", WMax=" + currentMaxW);
-			Node currentMax = currentMaxV.costToPath > currentMaxW.costToPath ? currentMaxV : currentMaxW;
-			if (currentMax.costToPath > newEdgeCost) {
+			final Node currentMaxV = tree.calcMax(v);
+			final Node currentMaxW = tree.calcMax(w);
+			Node currentMax = (currentMaxV.cost >= currentMaxW.cost) ? currentMaxV : currentMaxW;
+			System.out.println("Max=" + currentMax + ", VMax=" + currentMaxV + ", WMax=" + currentMaxW);
+			if (currentMax.cost > newEdgeCost) {
 				System.out.println("Current max " + currentMax + " is more than new edge cost " + newEdgeCost + ", cutting " + currentMax.id);
 				tree.cut(currentMax);
 				nodes.remove(currentMax.id);
 				tree.link(v, w);
 			} else {
-				System.out.println("To root from " + v + " max " + currentMaxV + " with cost " + currentMaxV.dcost);
+				System.out.println("Not adding edge. New edge cost " + newEdgeCost + " > current max " + currentMax.id + " cost " + currentMax.cost);
 			}
 		}
 	}
