@@ -17,27 +17,11 @@ public class Node {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
-		return obj != null && id == ((Node)obj).id;
-	}
-
-	public int getCost() {
-		return 0;
-	}
-
-	@Override
 	public String toString() {
-		String parentStr = "";
-		if (pathParentLink != null) {
-			parentStr+=", link=" + pathParentLink.id;
-		}
-		if (parent != null) {
-			parentStr+=", p=" + parent.id;
-		}
-
 		return "Node [id=" + id 
 					+ ", cost="+cost
-					+ parentStr
+					+ (pathParentLink == null ? "" : ", link=" + pathParentLink.id)
+					+ (parent == null ? "" : ", p=" + parent.id)
 					+ (left == null ? "" : ", l=" + left.id)
 					+ (right == null ? "" : ", r=" + right.id) 
 					+ "]";

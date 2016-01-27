@@ -39,25 +39,15 @@ public class StreamingMSTApp {
 	}
 
 	public Node findRoot(int vId) {
-		final Node v = get(vId);
-		if (v == null) {
-			throw new IllegalArgumentException("Node is null " + vId);
-		}
-		return tree.findRoot(v);
+		return tree.findRoot(get(vId));
 	}
 
 	public boolean connected(int vId, int wId) {
-		final Node v = get(vId);
-		final Node w = get(wId);
-		return tree.connected(v, w);
+		return tree.connected(get(vId), get(wId));
 	}
 
 	private Node get(int vId) {
-		final Node v = nodes.get(vId);
-		if (v == null) {
-			throw new IllegalArgumentException("Node is null " + vId);
-		}
-		return v;
+		return nodes.get(vId);
 	}
 
 	public void test() {

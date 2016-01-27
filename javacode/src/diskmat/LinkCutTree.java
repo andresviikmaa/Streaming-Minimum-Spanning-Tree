@@ -3,9 +3,8 @@ package diskmat;
 public class LinkCutTree {
 
 	/**
-	 * Calculates max cost.
+	 * Calculates max cost node on the path from v to MST root.
 	 * Travels the whole path (splay-tree) to calculate cost.
-	 * Expected v to be accessed.
 	 */
 	public Node calcMax(Node v) {
 		access(v);
